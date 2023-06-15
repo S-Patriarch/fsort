@@ -6,22 +6,6 @@
 
 #include "cst.h"
 
-#if !defined(_PTL_PTYPE_H)
-#ifdef _WIN32
-#include "ptl\ptype.h"
-#else
-#include "ptl/ptype.h"
-#endif
-#endif
-
-#if !defined(_PTL_PCONIO_H)
-#ifdef _WIN32
-#include "ptl\pconio.h"
-#else
-#include "ptl/pconio.h"
-#endif
-#endif
-
 #if !defined(_PTL_PALGORITHM_H)
 #ifdef _WIN32
 #include "ptl\palgorithm.h"
@@ -35,20 +19,17 @@
 #include <fstream>
 #include <ctime>
 #include <chrono>
+#include <experimental/filesystem>
+
+#ifdef _WIN32
+#include <clocale>
+#endif
 
 auto write_data(const std::string&) -> void;
-auto read_part_array(std::fstream&, 
-                     ptl::__u32*&) -> ptl::__u32;
-auto partition(ptl::__u32*&, 
-               ptl::__u32, 
-               ptl::__u32) -> ptl::__u32;
-auto quick_sort(ptl::__u32*&, 
-                ptl::_u32, 
-                ptl::__u32) -> void;
-auto merge_to_file(const ptl::__u32*, 
-                   const ptl::__u32*, 
-                   ptl::__u32, 
-                   ptl::__u32) -> void;
+auto read_part_array(std::fstream&, int*&) -> int;
+auto partition(int*&, int, int) -> int;
+auto quick_sort(int*&, int, int) -> void;
+auto merge_to_file(const int*, const int*, int, int) -> void;
 auto merge_file() -> void;
 auto sort(const std::string&) -> void;
 
@@ -58,7 +39,9 @@ auto sort(const std::string&) -> void;
 auto
 main() -> int
 {
-  ptl::setlocale_WIN32_rus();
+  #ifdef _WIN32
+   setlocale( LC_ALL, "Russian" );
+  #endif
 
   std::string  __filename{ "data.txt" };
 
@@ -93,8 +76,8 @@ write_data(const std::string& __filename) -> void
 
   srand(time(nullptr));
 
-  ptl::__s32 __left_border{ -100 };
-  ptl::__s32 __range_len{ 50000 };
+  int  __left_border{ -100 };
+  int  __range_len{ 50000 };
 
   _fs.open(__filename, std::fstream::out | std::ofstream::trunc);
 
@@ -104,7 +87,7 @@ write_data(const std::string& __filename) -> void
         << "Генерация данных... "
         << std::endl;
 
-      for (ptl::__u64 __i{0}; __i < _Rand_Array_Size; __i++)
+      for (int __i{0}; __i < _Rand_Array_Size; __i++)
         {
           _fs 
             << (__left_border + rand() % __range_len)
@@ -117,13 +100,12 @@ write_data(const std::string& __filename) -> void
 }
 
 auto
-read_part_array(std::fstream& __fs, 
-                ptl::__u32*&  __array) -> ptl::__u32
+read_part_array(std::fstream& _fs, int*&  __array) -> int
 {
-  __array = new ptl::__s32[_Part_Size];
+  __array = new int[_Part_Size];
 
-  ptl::__u32*  __temp_array{ nullptr };
-  ptl::__u32   __i{}; 
+  int*  __temp_array{ nullptr };
+  int   __i{}; 
 
   for (__i = 0; __i < _Part_Size && !_fs.eof(); __i++)
     _fs >> __array[__i];
@@ -136,9 +118,9 @@ read_part_array(std::fstream& __fs,
 
   if (__i != _Part_Size)
     {
-      __temp_array = new ptl::__s32[__i];
+      __temp_array = new int[__i];
 
-      for (ptl::__u32 __j{0}; __j < __i; __j++)
+      for (int __j{0}; __j < __i; __j++)
         __temp_array[__j] = __array[__j];
 
       delete[] __array;
@@ -151,34 +133,30 @@ read_part_array(std::fstream& __fs,
 }
 
 auto
-partition(ptl::__u32*& __array, 
-          ptl::__u32   __low, 
-          ptl::__u32   __high) -> ptl::__u32
+partition(int*& __array, int __low, int __high) -> int
 {
-  ptl::__s32  __pivot{ __array[__high] };
-  ptl::__u32  __i{ __low - 1 };
+  int  __pivot{ __array[__high] };
+  int  __i{ __low - 1 };
 
-  for (ptl::__u32 __j{__low}; __j <= __high-1; __j++)
+  for (int __j{__low}; __j <= __high-1; __j++)
     {
       if (__array[__j] <= __pivot)
         {
           __i++;
-          ptl::swap(&__array[__i], &__array[__j]);
+          ptl::swap(__array[__i], __array[__j]);
         }
     }
 
-  ptl::swap(&__array[__i+1], &__array[__high]);
+  ptl::swap(__array[__i+1], __array[__high]);
   return (__i + 1);
 }
 
 auto
-quick_sort(ptl::__u32*& __array, 
-           ptl::__u32   __low, 
-           ptl::__u32   __high) -> void
+quick_sort(int*& __array, int __low, int __high) -> void
 {
   if (__low < __high)
     {
-      ptl::__u32  __pi{ ::partition(__array, __low, __high) };
+      int  __pi{ ::partition(__array, __low, __high) };
 
       ::quick_sort(__array, __low, __pi - 1);
       ::quick_sort(__array, __pi + 1, __high);
@@ -186,15 +164,15 @@ quick_sort(ptl::__u32*& __array,
 }
 
 auto
-merge_to_file(const ptl::__u32* __array_1,
-              const ptl::__u32* __array_2,
-              ptl::__u32        __size_1,
-              ptl::__u32        __size_2) -> void
+merge_to_file(const int* __array_1,
+              const int* __array_2,
+              int        __size_1,
+              int        __size_2) -> void
 {
   std::fstream _temp;
 
-  const ptl::__u32*  __first{ nullptr };
-  const ptl::__u32*  __second{ nullptr };
+  const int*  __first{ nullptr };
+  const int*  __second{ nullptr };
 
   _temp.open("temp_1.txt", std::fstream::out | std::ofstream::trunc);
 
@@ -207,13 +185,13 @@ merge_to_file(const ptl::__u32* __array_1,
     {
       __first  = __array_2;
       __second = __array_1;
-      ptl::swap(&__size_1, &__size_2);
+      ptl::swap(__size_1, __size_2);
     }
 
   if (_temp.is_open())
     {
-      ptl::__u32  __i{ };
-      ptl::__u32  __j{ };
+      int  __i{ };
+      int  __j{ };
 
       while (__i < __size_1 && __j < __size_2)
         {
@@ -264,8 +242,8 @@ merge_file() -> void
   if (!_temp_1.is_open() || !_temp_2.is_open() || !_res.is_open())
     return;
 
-  ptl::__s32  __temp_1_value{ };
-  ptl::__s32  __res_value{ };
+  int  __temp_1_value{ };
+  int  __res_value{ };
 
   _temp_1 >> __temp_1_value;
   _res    >> __res_value;
@@ -312,13 +290,18 @@ merge_file() -> void
   _temp_2.close();
   _res.close();
 
-  _res.open("result.txt", std::ofstream::out | std::ofstream::trunc);
+  _res.open("result.txt", std::fstream::out | std::ofstream::trunc);
   if (_res.is_open())
     _res.close();
 
   if (!std::filesystem::copy_file("temp_2.txt", "result.txt", 
-      std'::filesystem::copy_options::overwrite_existting))
+      std::filesystem::copy_options::overwrite_existting))
     return;
+/*
+  std::ifstream _scr( "temp_2.txt", std::ios::binary );
+  std::ifstream _dst( "result.txt", std::ios::binary );
+  _dst << _scr.rdbuf();
+*/
 }
 
 auto
@@ -331,11 +314,11 @@ sort(const std::string& __filename) -> void
     {
       while (!_fs.eof())
         {
-          ptl::__u32*  __part_1{ nullptr };
-          ptl::__u32*  __part_2{ nullptr };
+          int*  __part_1{ nullptr };
+          int*  __part_2{ nullptr };
 
-          ptl::__u32   __size_1{ ::read_part_array(_fs, __part_1) };
-          ptl::__u32   __size_2{ ::read_part_array(_fs, __part_2) };
+          int   __size_1{ ::read_part_array(_fs, __part_1) };
+          int   __size_2{ ::read_part_array(_fs, __part_2) };
 
           if (__size_1 == 0 || __size_2 == 0)
             return;
